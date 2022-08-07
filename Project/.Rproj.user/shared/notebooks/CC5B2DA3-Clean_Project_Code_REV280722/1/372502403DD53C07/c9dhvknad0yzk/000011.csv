@@ -1,0 +1,6 @@
+"0","global_biomes <- biome_filtered %>% "
+"0","    filter(!BIOME %in% c(0,98,99))%>%"
+"0","    mutate(BIOME = as_factor(BIOME)) %>%"
+"0","    ggplot(aes(x = lon, y = lat)) +"
+"0","    geom_point(aes(colour = BIOME))"
+"0","global_biomes"

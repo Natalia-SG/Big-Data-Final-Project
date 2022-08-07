@@ -1,0 +1,3 @@
+"0","plot_data_tmp %>%"
+"0","    mutate(BIOME=as_factor(BIOME)) %>%"
+"0","ggplot(aes(x=plot_data_pre$biome_mean_pre, y=plot_data_tmp$biome_mean_tmp)) + geom_point(aes(colour=BIOME), size=2.5)+ geom_errorbar(aes(colour=BIOME, width=9, ymin=plot_data_tmp$biome_mean_tmp-plot_data_tmp$sd_biome_tmp, ymax=plot_data_tmp$biome_mean_tmp+plot_data_tmp$sd_biome_tmp)) + geom_errorbarh(aes(colour=BIOME, height=2, xmin=plot_data_pre$biome_mean_pre-plot_data_pre$sd_biome_pre, xmax=plot_data_pre$biome_mean_pre+plot_data_pre$sd_biome_pre)) + ggtitle(""Mean values for temperature vs. precipitation per biome"") + xlab(""mean precipitation"") + ylab(""mean temperature"")"

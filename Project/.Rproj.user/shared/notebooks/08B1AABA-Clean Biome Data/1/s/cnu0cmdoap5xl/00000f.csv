@@ -1,0 +1,4 @@
+"0","plot_data_pre %>%"
+"0","    mutate(BIOME=as_factor(BIOME)) %>%"
+"0","    ggplot(aes(x=biome_mean_pre, y=mean_pre_r2)) + geom_point(aes(colour=BIOME), size=2.5)+ geom_errorbar(aes(colour=BIOME, width= 9, ymin=mean_pre_r2-sd_pre_r2, ymax=mean_pre_r2+sd_pre_r2)) +"
+"0","    geom_errorbarh(aes(colour=BIOME, height=0.03, xmin=biome_mean_pre-sd_biome_pre, xmax=biome_mean_pre+sd_biome_pre))+ ggtitle(""Mean R-squared vs. mean values for global precipitation per biome"") + xlab(""mean precipitation value"") + ylab(""mean precipitation R-squared"")"

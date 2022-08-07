@@ -1,0 +1,40 @@
+---
+title: "test_functions"
+author: "Isaac Towers"
+date: "07/06/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Isaac
+
+## Mika
+```{r}
+# Testing pushing and stuff
+```
+
+
+## Cassie
+```{r}
+# hello :)
+```
+
+
+## Natalia
+
+```{r}
+
+library(ggplot2)
+library(dplyr)
+
+```
+
+
+## Nathania
+```{r}
+# yeah here we go
+```
+

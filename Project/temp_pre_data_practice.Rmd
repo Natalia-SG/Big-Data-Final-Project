@@ -1,0 +1,387 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidync)
+library(tidyverse)
+library(R.utils)
+library(lubridate)
+library(purrr)
+library(maps)
+```
+
+# PRECIPITATION GRAPH
+``` {r}
+
+#gunzip("cru_ts3.21.2001.2010.pre.dat.nc.gz", remove=FALSE)
+
+file <- "cru_ts3.21.2001.2010.pre.dat.nc"
+```
+
+```{r}
+lon  <- 
+    tidync(file) %>% activate("D0") %>% hyper_tibble()
+lat <-  
+    tidync(file) %>% activate("D1") %>% hyper_tibble()
+time <- 
+    tidync(file) %>% activate("D2") %>% hyper_tibble()
+```
+
+
+```{r}
+location_data <-
+  tidync(file) %>% activate("pre") %>%
+  hyper_filter(lon = lon == 149.25, lat = lat== -30.75) %>%
+  hyper_tibble()
+```
+
+
+```{r}
+location_data %>%
+   ggplot(aes(x=time, y=pre)) + 
+    geom_point() 
+```
+
+
+```{r}
+location_data %>%
+    mutate(pre_mean=mean(pre)) %>% 
+   ggplot(aes(x=time, y=pre)) +
+    geom_point() +
+    geom_hline(aes(yintercept = pre_mean), color="red")
+    
+
+location_data %>%
+    mutate(pre_mean=mean(pre)) %>% 
+    ggplot(aes(x=time, y=pre)) + 
+    geom_line() +
+    geom_hline(aes(yintercept = pre_mean), color="red")
+```
+
+
+
+# TEMPERATURE GRAPH
+```{r}
+if(!file.exists(file)){
+gunzip("cru_ts3.21.2001.2010.tmp.dat.nc", remove=FALSE)
+}
+
+file.2 <- "cru_ts3.21.2001.2010.tmp.dat.nc"
+```
+
+
+```{r}
+lon  <- 
+    tidync(file.2) %>% activate("D0") %>% hyper_tibble()
+lat <-  
+    tidync(file.2) %>% activate("D1") %>% hyper_tibble()
+time <- 
+    tidync(file.2) %>% activate("D2") %>% hyper_tibble()
+```
+
+```{r}
+location_data <-
+  tidync(file.2) %>% activate("tmp") %>%
+  hyper_filter(lat = abs(lat - -30.75) == min(abs(lat - -30.75))) %>%
+  hyper_filter(lon = abs(lon - 149.25) == min(abs(lon - 149.25))) %>%
+  hyper_tibble()%>%
+  mutate(time = as.Date(time, origin = "1900-01-01"))
+
+```
+
+```{r}
+location_data %>%
+  mutate(mean_temp = mean(tmp)) %>%
+  ggplot(aes(x = time, y = tmp)) +
+  geom_line() +
+  geom_hline(aes(yintercept = mean_temp), linetype = "dashed", size = 2 ) +
+  theme_classic()
+```
+
+```{r}
+#y ~ 1 + c
+#Y ~ 1
+#y ~ month
+lm(tmp ~lat, location_data)
+lm1 <- lm(tmp ~1, location_data)
+```
+
+
+```{r}
+coef(lm1)
+location_data %>%
+  mutate(mean_temp = mean(tmp), std_err_temp = coef(summary(lm1))[, "Std. Error"]) %>%
+  mutate(estimated_mean = coef(lm1), lower_ci = estimated_mean - 1.96*std_err_temp, higher_ci = estimated_mean + 1.96*std_err_temp,
+         low.quantile = estimated_mean - 1.96*sd(tmp),
+         up.quantile = estimated_mean + 1.96*sd(tmp)) %>%
+  ggplot(aes(x = time, y = tmp)) +
+  geom_line() +
+  geom_hline(aes(yintercept = mean_temp), linetype = "dashed", size = 2 ) +
+  geom_hline(aes(yintercept = estimated_mean), linetype = "dotted", col = "red", size = 2 ) +
+  geom_ribbon(aes(ymin = low.quantile, ymax = up.quantile), alpha = 0.1, fill = "yellow") +
+  geom_ribbon(aes(ymin = lower_ci, ymax = higher_ci), alpha = 0.1, fill = "red") +
+  theme_classic()
+summary(lm1)$adj.r.squared
+```
+
+
+```{r}
+location_data_month <-
+location_data %>%
+    mutate(date = ymd(time)) %>% 
+  mutate_at(vars(date), funs(year, month, day)) %>%
+    mutate(month= month(month, label= TRUE), month_character= as.character(month))
+```
+
+
+```{r}
+fit <- lm(tmp ~ month_character, location_data_month)
+summary(fit)
+```
+
+```{r}
+predict(fit)
+```
+
+```{r}
+location_data_predicted <-
+location_data_month %>%
+    mutate(predicted_temp = predict(fit))
+```
+
+```{r}
+ggplot(location_data_predicted, aes(y = tmp, x = time)) +
+    geom_line() + 
+    geom_line(aes(y = predicted_temp), colour = 'red')
+```
+```{r}
+location_data <-
+  tidync(file.2) %>% activate("tmp") %>%
+  hyper_tibble()%>%
+  mutate(time = as.Date(time, origin = "1900-01-01")) %>%
+  mutate(month= month(time, label= TRUE))
+
+```
+
+```{r}
+calc_r_squared <- function(data, target_lat, target_lon) {
+    
+    data_slice<- data %>%
+        filter(lon== target_lon & lat== target_lat)
+    lm_data_slice<-lm(tmp~month, data_slice)
+    summary(lm_data_slice)$adj.r.squared
+}
+
+calc_r_squared(data=location_data, target_lat=-54.75, target_lon=-68.25)
+```
+
+
+```{r}
+calc_predictions <- function(data, target_lat, target_lon) {
+    data_slice<- data %>%
+        filter(lon== target_lon & lat== target_lat)
+    lm_fit <- lm(tmp ~ month, data_slice)
+    predict(lm_fit)
+}
+calc_predictions(data=location_data, target_lat=-54.75, target_lon=-71.75)
+```
+```{r}
+location_data <-
+  tidync(file.2) %>% activate("tmp") %>%
+  hyper_tibble()%>%
+  mutate(time = as.Date(time, origin = "1900-01-01")) %>%
+  mutate(month= month(time, label= TRUE))
+```
+
+```{r}
+# map functions using purrr
+
+library(purrr)
+
+# add1 <- function(x) {x+1}
+
+# x <- (1:100)
+
+# ?map
+
+# map(x, add1) %>% str()
+
+# map_dbl(x, add1) %>% str()
+```
+# Original Function
+```{r}
+calc_r_squared <- function(data, target_lat, target_lon) {
+
+ 
+
+    data_slice<- data %>%
+
+ 
+
+        filter(lon== target_lon & lat== target_lat)
+
+ 
+
+    lm_data_slice<-lm(tmp~month, data_slice)
+
+ 
+
+    summary(lm_data_slice)$adj.r.squared}
+
+ 
+
+calc_r_squared(data =location_data, target_lat= 46.25, target_lon= 2.25)
+```
+
+ 
+
+```{r}
+?nest
+
+location_data %>% nest(tmp_data=c(tmp, time, month)) -> location_data_nest
+
+location_data_nest$tmp_data[[3]]
+
+calc_r_squared_map <- function(data) {
+
+ 
+
+    tmp_data_fit<-lm(tmp~month, data)
+
+ 
+
+    summary(tmp_data_fit)$adj.r.squared
+    }
+```
+
+ 
+
+# Dont need to define arguments, because function takes a single argument
+```{r}
+location_data_nest <- location_data_nest %>% mutate(r_squared= map_dbl(tmp_data, calc_r_squared_map))
+```
+# creating a model, storing fitted models in 1 column, and r2 in another. Can be replicated for other variables
+```{r}
+fit_tmp_model <- function(data) {
+
+ 
+
+   lm(tmp~month, data)
+}
+extract_r2 <- function(fit){
+    summary(fit)$adj.r.squared
+    
+}
+location_data_nest_r2 <- location_data_nest_sliced 
+   %>% slice(1:100000) %>%
+    mutate(
+        fit_tmp= map(tmp_data_fit, fit_tmp_model), 
+        tmp_r_squared= map_dbl(fit_tmp, extract_r2))
+```
+
+
+
+
+
+```{r}
+TOTAL_PRECIP <- "cru_ts3.22.1901.2013.pre.dat.nc"
+TOTAL_TMP <- "cru_ts3.22.1901.2013.tmp.dat.nc"
+```
+ 
+ 
+```{r}
+lon  <-
+    tidync(TOTAL_PRECIP) %>% activate("D0") %>% hyper_tibble()
+lat <- 
+    tidync(TOTAL_PRECIP) %>% activate("D1") %>% hyper_tibble()
+time <-
+    tidync(TOTAL_PRECIP) %>% activate("D2") %>% hyper_tibble() %>%
+    mutate(time_ymd = as.Date(time, origin = "1900-01-01")) %>%
+    mutate(month= month(time_ymd, label= TRUE)) %>%
+    mutate(year= year(time_ymd))
+```
+ 
+```{r}
+Total_data_precip <-
+  tidync(TOTAL_PRECIP) %>% activate("pre") %>%
+    hyper_filter(time = time >= 29234, lat = abs(lat) < 70) %>%
+  hyper_tibble() %>%
+  mutate(time = as.Date(time, origin = "1900-01-01")) %>%
+    mutate(month= month(time, label= TRUE))%>%
+    mutate(year= year(time))
+```
+
+```
+
+```{r}
+#Creating function using full data set
+TOTAL_PRECIP <- "cru_ts3.22.1901.2013.pre.dat.nc"
+TOTAL_TMP <- "cru_ts3.22.1901.2013.tmp.dat.nc"
+```
+ 
+ 
+```{r}
+lon <-
+    tidync(TOTAL_PRECIP) %>% activate("D0") %>% hyper_tibble()
+lat <- 
+    tidync(TOTAL_PRECIP) %>% activate("D1") %>% hyper_tibble()
+time <-
+    tidync(TOTAL_PRECIP) %>% activate("D2") %>% hyper_tibble() %>%
+    mutate(time_ymd = as.Date(time, origin = "1900-01-01")) %>%
+    mutate(month= month(time_ymd, label= TRUE)) %>%
+   mutate(year= year(time_ymd))
+    
+```
+ 
+ 
+```{r}
+Total_data_precip <-
+  tidync(TOTAL_PRECIP) %>% activate("pre") %>%
+    hyper_filter(time = time >= 29234, lat = abs(lat) < 70) %>%
+  hyper_tibble() %>%
+  mutate(time = as.Date(time, origin = "1900-01-01")) %>%
+    mutate(month= month(time, label= TRUE))%>%
+    mutate(year= year(time))
+```
+ 
+```{r}
+#Nesting precipitation data
+Total_data_precip %>% nest(pre_data=c(pre,time,month,year)) -> precip_data_nested
+```
+ 
+```{r}
+precip_data_nested$pre_data[[4]]
+```
+ 
+ 
+```{r}
+fit_total_pre_model <- function(data) {
+   
+      lm(pre~month, data)
+}
+pre_extract_r2 <- function(fit) {
+   
+    summary(fit)$adj.r.squared
+}
+   
+precip_data_nested <- precip_data_nested %>%
+    slice(1:3000) %>% mutate(
+        fit_pre = map(pre_data,fit_total_pre_model),
+        pre_r_squared = map_dbl(fit_pre, extract_r2))
+ 
+```
+ 
+ 
+#Create plot for precip
+```{r}
+ggplot(precip_data_nested, aes(y = lat, x = lon))+
+    geom_point()
+```
+```
+

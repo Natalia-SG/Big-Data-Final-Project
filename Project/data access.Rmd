@@ -1,0 +1,114 @@
+---
+title: "Data access"
+date: '2022-06-07'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Downlaod CRU time series from https://data.ceda.ac.uk/badc/cru/data/cru_ts/cru_ts_3.21/
+
+# Load data using tidync
+
+load libraries
+```{r}
+library(tidync)
+library(tidyverse)
+library(R.utils)
+library(lubridate)
+library(purrr)
+
+
+file <- "data-raw/cru_ts3.21.2001.2010.tmp.dat.nc"
+
+if(!file.exists(file)){
+gunzip("data-raw/cru_ts3.21.2001.2010.tmp.dat.nc.gz", remove=FALSE)
+}
+
+data <- tidync(file)
+```
+
+
+```{r}
+lon  <- 
+    tidync(file) %>% activate("D0") %>% hyper_tibble()
+lat <-  
+    tidync(file) %>% activate("D1") %>% hyper_tibble()
+time <- 
+    tidync(file) %>% activate("D2") %>% hyper_tibble()
+```
+
+Load all data
+```{r}
+location_data <-
+  tidync(file) %>% activate("tmp") %>%
+  hyper_filter(lat = abs(lat - -27.0) == min(abs(lat - -27.0))) %>%
+  hyper_filter(lon = abs(lon - 151.0260) == min(abs(lon - 153.0260))) %>%
+  hyper_tibble()%>%
+  mutate(time = as.Date(time, origin = "1900-01-01"))
+
+location_data %>%
+  mutate(mean_temp = mean(tmp)) %>%
+  ggplot(aes(x = time, y = tmp)) +
+  geom_line() +
+  geom_hline(aes(yintercept = mean_temp), linetype = "dashed", size = 2 ) +
+  theme_classic()
+
+```
+```{r}
+y~ 1 + c
+Y~1
+y~month
+#lm(tmp~latitude)
+
+lm1 <- lm(tmp~1, location_data)
+
+# coef(summary(lm1))[, "Std. Error"]
+coef(lm1)
+
+location_data %>%
+  mutate(mean_temp = mean(tmp), std_err_temp = coef(summary(lm1))[, "Std. Error"]) %>%
+  mutate(estimated_mean = coef(lm1), lower_ci = estimated_mean - 1.96*std_err_temp, higher_ci = estimated_mean + 1.96*std_err_temp,
+         low.quantile = estimated_mean - 1.96*sd(tmp),
+         up.quantile = estimated_mean + 1.96*sd(tmp)) %>%
+  ggplot(aes(x = time, y = tmp)) +
+  geom_line() +
+  geom_hline(aes(yintercept = mean_temp), linetype = "dashed", size = 2 ) +
+  geom_hline(aes(yintercept = estimated_mean), linetype = "dotted", col = "red", size = 2 ) +
+  geom_ribbon(aes(ymin = low.quantile, ymax = up.quantile), alpha = 0.1, fill = "yellow") +
+  geom_ribbon(aes(ymin = lower_ci, ymax = higher_ci), alpha = 0.1, fill = "red") +
+  theme_classic()
+
+
+summary(lm1)$adj.r.squared
+```
+```{r}
+lm1 <- lm(month(1)~1, location_data)
+coef(lm1)
+
+location_data %>%
+  mutate(mean_temp = mean(tmp), std_err_temp = coef(summary(lm1))[, "Std. Error"]) %>%
+  mutate(estimated_mean = coef(lm1), lower_ci = estimated_mean - 1.96*std_err_temp, higher_ci = estimated_mean + 1.96*std_err_temp,
+         low.quantile = estimated_mean - 1.96*sd(tmp),
+         up.quantile = estimated_mean + 1.96*sd(tmp)) %>%
+  ggplot(aes(x = time, y = tmp)) +
+  geom_line() +
+  geom_hline(aes(yintercept = mean_temp), linetype = "dashed", size = 2 ) +
+  geom_hline(aes(yintercept = estimated_mean), linetype = "dotted", col = "red", size = 2 ) +
+  geom_ribbon(aes(ymin = low.quantile, ymax = up.quantile), alpha = 0.1, fill = "yellow") +
+  geom_ribbon(aes(ymin = lower_ci, ymax = higher_ci), alpha = 0.1, fill = "red") +
+  theme_classic()
+
+
+summary(lm1)$adj.r.squared
+```
+```{r}
+location_data_month <-
+location_data %<%
+ activate "time" %<%   
+    mutate(date(=ymd(time)) %<%
+               mutate_at(vars(date(, funs(year, month, day)
+                                   ```
+                                   

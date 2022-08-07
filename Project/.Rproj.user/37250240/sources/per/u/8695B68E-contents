@@ -1,0 +1,89 @@
+---
+title: "Biome Project"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidync)
+library(tidyverse)
+library(R.utils)
+library(lubridate)
+library(purrr)
+library(maps)
+```
+```{r}
+TOTAL_PRECIP <- "cru_ts3.22.1901.2013.pre.dat.nc"
+TOTAL_TMP <- "cru_ts3.22.1901.2013.tmp.dat.nc"
+```
+```{r}
+lon  <-
+    tidync(TOTAL_PRECIP) %>% activate("D0") %>% hyper_tibble()
+lat <- 
+    tidync(TOTAL_PRECIP) %>% activate("D1") %>% hyper_tibble()
+time <-
+    tidync(TOTAL_PRECIP) %>% activate("D2") %>% hyper_tibble() %>%
+    mutate(time_ymd = as.Date(time, origin = "1900-01-01")) %>%
+    mutate(month= month(time_ymd, label= TRUE)) %>%
+   mutate(year= year(time_ymd))
+```
+```{r}
+Total_data_precip <-
+  tidync(TOTAL_PRECIP) %>% activate("pre") %>%
+    hyper_filter(time = time >= 29234, lat = abs(lat) < 70) %>%
+  hyper_tibble() %>%
+  mutate(time = as.Date(time, origin = "1900-01-01")) %>%
+    mutate(month= month(time, label= TRUE))%>%
+    mutate(year= year(time))
+```
+ 
+```{r}
+# nesting precip data
+Total_data_precip %>% nest(pre_data=c(pre, time, month, year)) -> location_data_pre_nested
+```
+ 
+# *Now* the biome stuff
+```{r}
+location_data_pre_nested
+ 
+read.csv("CRU_biome.csv") -> biome
+biome
+```
+# Joining the biome data to the nested data
+```{r}
+biome_filtered<- biome %>%
+    filter(abs(lat) < 70)
+ 
+location_data_pre_biome<- location_data_pre_nested %>%
+    left_join(biome_filtered)
+location_data_pre_biome
+```
+# r squared values for pre
+```{r}
+fit_pre_model<-function(data) {
+    lm(pre~month, data)
+}
+ 
+   
+pre_extract_r2 <- function(fit) {
+    summary(fit)$adj.r.squared
+}
+location_data_pre_sliced <- location_data_pre_nested %>%
+    slice(1:10000) %>%
+    mutate(
+        fit_pre= map(pre_data, fit_pre_model),
+        pre_r_squared=map_dbl(fit_pre, pre_extract_r2))
+ 
+ggplot(location_data_pre_sliced, aes(y = lat, x = lon))+
+    geom_point(aes(colour=pre_r_squared)) + scale_colour_viridis_c()
+```
+# biome map
+```{r}
+location_data_pre_biome %>%
+    mutate(BIOME=as.factor(BIOME)) %>%
+ggplot(aes(y = lat, x = lon))+
+    geom_point(aes(colour=BIOME))
+```

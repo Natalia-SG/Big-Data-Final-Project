@@ -1,0 +1,7 @@
+"0","    "
+"0",""
+"0","location_data %>%"
+"0","    mutate(pre_mean=mean(pre)) %>% "
+"0","    ggplot(aes(x=time, y=pre)) + "
+"0","    geom_line() +"
+"0","    geom_hline(aes(yintercept = pre_mean), color=""red"")"

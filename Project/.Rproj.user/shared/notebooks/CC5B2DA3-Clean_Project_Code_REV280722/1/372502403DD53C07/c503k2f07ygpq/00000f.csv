@@ -1,0 +1,6 @@
+"0","location_data_tmp_biome %>%"
+"0","    group_by(BIOME) %>% "
+"0","    summarize(mean_tmp_r2=mean(tmp_r_squared, na.rm=TRUE),"
+"0","              biome_mean_tmp= mean(mean_tmp, na.rm=TRUE), "
+"0","              sd_tmp_r2= sd(tmp_r_squared, na.rm=TRUE),"
+"0","              sd_biome_tmp= sd(mean_tmp, na.rm=TRUE))-> plot_data_tmp"

@@ -1,0 +1,7 @@
+"0","location_data <-"
+"0","  tidync(file.2) %>% activate(""tmp"") %>%"
+"0","  hyper_filter(lat = abs(lat - -30.75) == min(abs(lat - -30.75))) %>%"
+"0","  hyper_filter(lon = abs(lon - 149.25) == min(abs(lon - 149.25))) %>%"
+"0","  hyper_tibble()%>%"
+"0","  mutate(time = as.Date(time, origin = ""1900-01-01""))"
+"0",""

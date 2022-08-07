@@ -1,0 +1,3 @@
+"0","location_data_predicted <-"
+"0","location_data_month %>%"
+"0","    mutate(predicted_temp = predict(fit))"

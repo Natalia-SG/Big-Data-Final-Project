@@ -1,0 +1,7 @@
+"0","biome_filtered<- biome %>%"
+"0","    filter(abs(lat) < 70)"
+"0",""
+"0","location_data_tmp_biome<- location_data_tmp_total %>%"
+"0","    left_join(biome_filtered)"
+"2","Joining, by = c(""lat"", ""lon"")"
+"0","location_data_tmp_biome"

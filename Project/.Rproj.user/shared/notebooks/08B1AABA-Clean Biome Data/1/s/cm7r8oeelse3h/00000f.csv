@@ -1,0 +1,4 @@
+"0","plot_data_tmp %>%"
+"0","    mutate(BIOME=as_factor(BIOME)) %>%"
+"0","    ggplot(aes(x=biome_mean_tmp, y=mean_tmp_r2)) + geom_point(aes(colour=BIOME), size=2.5)+ geom_errorbar(aes(colour=BIOME, width=1.5, ymin=mean_tmp_r2-sd_tmp_r2, ymax=mean_tmp_r2+sd_tmp_r2)) +"
+"0","    geom_errorbarh(aes(colour=BIOME, height=0.03, xmin=biome_mean_tmp-sd_biome_tmp, xmax=biome_mean_tmp+sd_biome_tmp)) + ggtitle(""Mean R-squared vs. mean values for global temperature per biome"") + xlab(""mean temperature value"") + ylab(""mean temperature R-squared"")"

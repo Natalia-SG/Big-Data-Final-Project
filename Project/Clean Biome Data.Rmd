@@ -1,0 +1,214 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+---
+title: "Cleaned code for predictability index project 28/07/22 VER"
+output: html_notebook
+---
+
+This file contains the following plots: 
+- 2 world maps of R-squared values by colour scakle for both tmp and pre
+- 2 Scatterplots of R-squared vs. mean value for both pre and tmp
+- scatterplot of mean R-squared value per biome for tmp vs. pre
+- scatterplot of mean values per biome for tmp vs. pre
+
+How to use this file:
+Unzip the RDS files sent with this RMD and place it in the same working directory. No changes to this file are needed to obtain the plots, just go to the top and click run all chunks below and everything's set.
+
+Code used to process the raw time series data into the RDS files we're actually using have been added for posterity, or if you want to generate an RDS file with different variables or sample size. It's all set to not run automatically so it doesn't slow you down if you're just here to generate the plots.
+
+I've added a line or two explaining what each chunk does, but feel free to edit any comments for clarity. And the plots are still rudimentary-looking, so edits to make it look nicer is in order for sure.
+
+
+Load packages
+```{r}
+library(tidync)
+library(tidyverse)
+library(R.utils)
+library(lubridate)
+library(purrr)
+```
+
+! Shortcut for loading the premade RDS files !
+```{r}
+location_data_pre_total <- readRDS("location_data_pre_total.RDS")
+location_data_tmp_total <- readRDS("location_data_tmp_total.RDS")
+```
+
+Loads raw data. Default: Does not automatically run.
+```{r, eval=FALSE}
+TOTAL_PRECIP <- "cru_ts3.22.1901.2013.pre.dat.nc"
+TOTAL_TMP <- "cru_ts3.22.1901.2013.tmp.dat.nc"
+```
+
+activate the hyper tibbles. For this section we're using tmp as example. Default: Does not automatically run.
+```{r, eval=FALSE}
+lon  <- 
+    tidync(TOTAL_TMP) %>% activate("D0") %>% hyper_tibble()
+lat <-  
+    tidync(TOTAL_TMP) %>% activate("D1") %>% hyper_tibble()
+time <- 
+    tidync(TOTAL_TMP) %>% activate("D2") %>% hyper_tibble() %>%
+    mutate(time_ymd = as.Date(time, origin = "1900-01-01")) %>%
+    mutate(month= month(time_ymd, label= TRUE)) %>%
+    mutate(year= year(time_ymd))
+```
+
+create date, month, year columns. Default: Does not automatically run.
+```{r, eval=FALSE}
+Total_data_tmp <-
+  tidync(TOTAL_TMP) %>% activate("tmp") %>%
+    hyper_filter(time = time >= 29234, lat = abs(lat) < 70) %>%
+  hyper_tibble() %>%
+  mutate(time = as.Date(time, origin = "1900-01-01")) %>%
+    mutate(month= month(time, label= TRUE))%>%
+    mutate(year= year(time))
+```
+
+nest the tmp values and time columns. Default: Does not automatically run.
+```{r, eval=FALSE}
+Total_data_tmp %>% nest(tmp_data=c(tmp, time, month, year)) -> location_data_tmp_nested
+
+location_data_tmp_nested
+```
+
+Adding columns for fitted values, extracted R-Squared values, and mean values. Default: does not automatically run.
+```{r, eval=FALSE}
+fit_tmp_model<-function(data) {
+    lm(tmp~month, data)
+}
+
+    
+tmp_extract_r2 <- function(fit) {
+    summary(fit)$adj.r.squared
+}
+location_data_tmp_total <- location_data_tmp_nested %>%
+    # slice(1:70000) %>%
+    # slice_sample(n=2000) %>%
+    mutate(
+        fit_tmp= map(tmp_data, fit_tmp_model),
+        mean_tmp= map_dbl(tmp_data, ~mean(.x$tmp, na.rm=TRUE)),
+        tmp_r_squared=map_dbl(fit_tmp, tmp_extract_r2))
+```
+
+slim down the dataset to just what's needed for our plot and saved as an RDS file. Default: does not automatically run.
+```{r, eval=FALSE}
+location_data_tmp_total %>% select(lat, lon, tmp_r_squared, mean_tmp) %>%
+saveRDS("location_data_tmp_total.RDS")
+```
+
+And that's how the RDS files were made!
+
+
+Now for the world map R-Squared plots:
+
+temp R-squared values
+```{r}
+ggplot(location_data_tmp_total, aes(y = lat, x = lon))+
+    geom_point(aes(colour=tmp_r_squared)) +
+    scale_colour_viridis_c()
+```
+
+pre R squared values
+```{r}
+ggplot(location_data_pre_total, aes(y = lat, x = lon))+
+    geom_point(aes(colour=pre_r_squared)) +
+    scale_colour_viridis_c()
+```
+
+
+Now we're onto the scatterplots.
+
+load biome data
+```{r}
+read.csv("CRU_biome.csv") -> biome
+biome
+```
+
+We'll do tmp and pre one at a time so we can use variables from both datasets later.
+
+tmp's up first!
+
+remove the arctic regions, leftjoin biome to total data tmp
+```{r}
+biome_filtered<- biome %>%
+    filter(abs(lat) < 70)
+
+location_data_tmp_biome<- location_data_tmp_total %>%
+    left_join(biome_filtered)
+location_data_tmp_biome
+```
+
+Set biome as categorical variable, add standard deviations.
+```{r}
+location_data_tmp_biome %>%
+    group_by(BIOME) %>% 
+    summarize(mean_tmp_r2=mean(tmp_r_squared, na.rm=TRUE),
+              biome_mean_tmp= mean(mean_tmp, na.rm=TRUE), 
+              sd_tmp_r2= sd(tmp_r_squared, na.rm=TRUE),
+              sd_biome_tmp= sd(mean_tmp, na.rm=TRUE))-> plot_data_tmp
+```
+
+tmp plot time!
+```{r}
+plot_data_tmp %>%
+    mutate(BIOME=as_factor(BIOME)) %>%
+    ggplot(aes(x=biome_mean_tmp, y=mean_tmp_r2)) + geom_point(aes(colour=BIOME), size=2.5)+ geom_errorbar(aes(colour=BIOME, width=1.5, ymin=mean_tmp_r2-sd_tmp_r2, ymax=mean_tmp_r2+sd_tmp_r2)) +
+    geom_errorbarh(aes(colour=BIOME, height=0.03, xmin=biome_mean_tmp-sd_biome_tmp, xmax=biome_mean_tmp+sd_biome_tmp)) + ggtitle("Mean R-squared vs. mean values for global temperature per biome") + xlab("mean temperature value") + ylab("mean temperature R-squared")
+```
+
+Hooray! okay now pre
+
+remove the arctic regions, leftjoin biome to total pre data
+```{r}
+biome_filtered<- biome %>%
+    filter(abs(lat) < 70)
+
+location_data_pre_biome<- location_data_pre_total %>%
+    left_join(biome_filtered)
+location_data_pre_biome
+```
+
+Set biome as categorical variable, add sds.
+```{r}
+location_data_pre_biome %>%
+    group_by(BIOME) %>% 
+    summarize(mean_pre_r2=mean(pre_r_squared, na.rm=TRUE),
+              biome_mean_pre= mean(mean_pre, na.rm=TRUE), 
+              sd_pre_r2= sd(pre_r_squared, na.rm=TRUE),
+              sd_biome_pre= sd(mean_pre, na.rm=TRUE))-> plot_data_pre
+```
+
+plot time!
+```{r}
+plot_data_pre %>%
+    mutate(BIOME=as_factor(BIOME)) %>%
+    ggplot(aes(x=biome_mean_pre, y=mean_pre_r2)) + geom_point(aes(colour=BIOME), size=2.5)+ geom_errorbar(aes(colour=BIOME, width= 9, ymin=mean_pre_r2-sd_pre_r2, ymax=mean_pre_r2+sd_pre_r2)) +
+    geom_errorbarh(aes(colour=BIOME, height=0.03, xmin=biome_mean_pre-sd_biome_pre, xmax=biome_mean_pre+sd_biome_pre))+ ggtitle("Mean R-squared vs. mean values for global precipitation per biome") + xlab("mean precipitation value") + ylab("mean precipitation R-squared")
+```     
+
+
+Now for the real deal!
+The code is spaghetti right now, we'll find a way to optimize this soon. But it works.
+
+! Plot mean tmp vs. pre !
+```{r}
+plot_data_tmp %>%
+    mutate(BIOME=as_factor(BIOME)) %>%
+ggplot(aes(x=plot_data_pre$biome_mean_pre, y=plot_data_tmp$biome_mean_tmp)) + geom_point(aes(colour=BIOME), size=2.5)+ geom_errorbar(aes(colour=BIOME, width=9, ymin=plot_data_tmp$biome_mean_tmp-plot_data_tmp$sd_biome_tmp, ymax=plot_data_tmp$biome_mean_tmp+plot_data_tmp$sd_biome_tmp)) + geom_errorbarh(aes(colour=BIOME, height=2, xmin=plot_data_pre$biome_mean_pre-plot_data_pre$sd_biome_pre, xmax=plot_data_pre$biome_mean_pre+plot_data_pre$sd_biome_pre)) + ggtitle("Mean values for temperature vs. precipitation per biome") + xlab("mean precipitation") + ylab("mean temperature")
+```
+
+! Plot mean R squared tmp vs pre !
+```{r}
+plot_data_pre %>%
+    mutate(BIOME=as_factor(BIOME)) %>%
+ggplot(aes(x=plot_data_pre$mean_pre_r2, y=plot_data_tmp$mean_tmp_r2)) + geom_point(aes(colour=BIOME), size = 2.5)+ geom_errorbar(aes(colour=BIOME, width=0.025, ymin=plot_data_tmp$mean_tmp_r2-plot_data_tmp$sd_tmp_r2, ymax=plot_data_tmp$mean_tmp_r2+plot_data_tmp$sd_tmp_r2)) + geom_errorbarh(aes(colour=BIOME, height=0.03, xmin=plot_data_pre$mean_pre_r2-plot_data_pre$sd_pre_r2, xmax=plot_data_pre$mean_pre_r2+plot_data_pre$sd_pre_r2)) + ggtitle("Mean R-squared values for temperature vs. precipitation per biome") + xlab("mean precipitation R-squared") + ylab("mean temperature R-squared")
+```
+
+And we're done!
+
+We still need to:
+Make the 2-datasets-scatterplot code less... spaghetti
+rid of Biomes 0, 98, 99
+Precipitation and temperature run on different unit and scales.For the mean values, we'd get better plot visibility if we scaled both down to the same units.

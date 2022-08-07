@@ -1,0 +1,27 @@
+{
+    "id": "4A693914",
+    "path": "~/Desktop/Climate_Data/Project/Clean_Project_Code_REV280722.Rmd",
+    "project_path": "Clean_Project_Code_REV280722.Rmd",
+    "type": "r_markdown",
+    "hash": "3675739053",
+    "contents": "",
+    "dirty": false,
+    "created": 1659097491339.0,
+    "source_on_save": false,
+    "relative_order": 2,
+    "properties": {
+        "chunk_output_type": "inline",
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "238,3",
+        "scrollLine": "0"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1659097141,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1659631159514,
+    "read_only": false,
+    "read_only_alternatives": []
+}

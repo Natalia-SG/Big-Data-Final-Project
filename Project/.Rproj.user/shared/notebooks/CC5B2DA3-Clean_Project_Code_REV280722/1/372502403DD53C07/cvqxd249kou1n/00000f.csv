@@ -1,0 +1,6 @@
+"0","location_data_pre_biome %>%"
+"0","    group_by(BIOME) %>% "
+"0","    summarize(mean_pre_r2=mean(pre_r_squared, na.rm=TRUE),"
+"0","              biome_mean_pre= mean(mean_pre, na.rm=TRUE), "
+"0","              sd_pre_r2= sd(pre_r_squared, na.rm=TRUE),"
+"0","              sd_biome_pre= sd(mean_pre, na.rm=TRUE))-> plot_data_pre"

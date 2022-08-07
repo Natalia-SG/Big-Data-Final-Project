@@ -1,0 +1,5 @@
+"0","if(!file.exists(file)){"
+"0","gunzip(""cru_ts3.21.2001.2010.tmp.dat.nc"", remove=FALSE)"
+"0","}"
+"0",""
+"0","file.2 <- ""cru_ts3.21.2001.2010.tmp.dat.nc"""

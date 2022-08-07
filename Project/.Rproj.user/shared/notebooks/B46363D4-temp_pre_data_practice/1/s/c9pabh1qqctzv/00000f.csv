@@ -1,0 +1,5 @@
+"0","?nest"
+"0",""
+"0","location_data %>% nest(tmp_data=c(tmp, time, month)) -> location_data_nest"
+"0",""
+"0","location_data_nest$tmp_data[[3]]"

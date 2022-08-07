@@ -1,0 +1,6 @@
+"0","lon  <- "
+"0","    tidync(file.2) %>% activate(""D0"") %>% hyper_tibble()"
+"0","lat <-  "
+"0","    tidync(file.2) %>% activate(""D1"") %>% hyper_tibble()"
+"0","time <- "
+"0","    tidync(file.2) %>% activate(""D2"") %>% hyper_tibble()"
